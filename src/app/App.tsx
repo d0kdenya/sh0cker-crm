@@ -6,6 +6,10 @@ import { supabase } from '../lib/supabase';
 import type { Task } from '../features/tasks/types';
 import type { Profile } from '../features/auth/types';
 
+import { testObjectPermissions } from '../features/objects/testPermissions';
+
+import { ObjectList } from '../features/objects/components/ObjectList';
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -195,6 +199,20 @@ function App() {
 
       <button type="button" onClick={handleLogout}>
         Выйти
+      </button>
+
+      {profile && (
+        <ObjectList
+          key={user.id}
+          isManager={profile.role === 'manager'}
+        />
+      )}
+
+      <button
+        type="button"
+        onClick={() => void testObjectPermissions()}
+      >
+        Проверить права на объекты
       </button>
 
       <h2>Доступные задачи</h2>
