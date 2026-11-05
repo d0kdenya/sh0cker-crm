@@ -6,7 +6,6 @@ import type {
     UpdateTaskInput,
 } from './types';
 
-// Получение доступных задач
 export async function getTasks() {
     const { data, error } = await supabase
         .from('tasks')
@@ -20,7 +19,6 @@ export async function getTasks() {
     return data;
 }
 
-// Получение списка исполнителей
 export async function getExecutors() {
     const { data, error } = await supabase
         .from('profiles')
@@ -35,7 +33,6 @@ export async function getExecutors() {
     return data;
 }
 
-// Создание задачи постановщиком
 export async function createTask(
     input: CreateTaskInput,
     authorId: string,
@@ -59,7 +56,6 @@ export async function createTask(
     return data;
 }
 
-// Редактирование бизнес-полей задачи
 export async function updateTask(
     taskId: string,
     input: UpdateTaskInput,
@@ -83,7 +79,6 @@ export async function updateTask(
     return data;
 }
 
-// Безопасная смена статуса
 export async function changeTaskStatus(
     taskId: string,
     newStatus: TaskStatus,
@@ -105,7 +100,6 @@ export async function changeTaskStatus(
     return data;
 }
 
-// Получение истории изменений задачи
 export async function getTaskHistory(taskId: string) {
     const { data, error } = await supabase
         .from('task_status_history')
@@ -119,4 +113,14 @@ export async function getTaskHistory(taskId: string) {
     }
 
     return data;
+}
+
+export async function archiveTask(taskId: string) {
+    const { error } = await supabase.rpc('archive_task', {
+        p_task_id: taskId,
+    });
+
+    if (error) {
+        throw error;
+    }
 }

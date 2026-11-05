@@ -21,4 +21,5 @@ export interface ObjectFormProps {
 
 export interface ObjectListProps {
     isManager: boolean;
+    onObjectArchived?: () => void;
 }

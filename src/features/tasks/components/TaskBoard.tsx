@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { getTaskHistory, getTasks } from '../api';
+import {
+    archiveTask,
+    getTaskHistory,
+    getTasks,
+} from '../api';
+
 import { TaskForm } from './TaskForm';
 import { TaskStatusActions } from './TaskStatusActions';
 
@@ -29,6 +34,8 @@ export function TaskBoard({
     const [isCreating, setIsCreating] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
 
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
     const [historyTaskId, setHistoryTaskId] = useState<string | null>(
         null,
     );
@@ -40,24 +47,27 @@ export function TaskBoard({
 
     const isManager = role === 'manager';
 
-    // Первоначальная загрузка задач
     useEffect(() => {
         let active = true;
 
         getTasks().then(
             (data) => {
-                if (!active) return;
+                if (!active) {
+                    return;
+                }
 
                 setTasks(data);
                 setLoading(false);
             },
             (err: unknown) => {
-                if (!active) return;
+                if (!active) {
+                    return;
+                }
 
                 setError(
-                err instanceof Error
-                    ? err.message
-                    : 'Не удалось загрузить задачи',
+                    err instanceof Error
+                        ? err.message
+                        : 'Не удалось загрузить задачи',
                 );
 
                 setLoading(false);
@@ -69,7 +79,6 @@ export function TaskBoard({
         };
     }, []);
 
-  // Обновление списка после изменений
     async function refreshTasks() {
         setError(null);
 
@@ -84,11 +93,10 @@ export function TaskBoard({
         } catch (err) {
             setError(
                 err instanceof Error
-                ? err.message
-                : 'Не удалось обновить задачи',
-        );
-
-        throw err;
+                    ? err.message
+                    : 'Не удалось обновить задачи',
+            );
+            throw err;
         }
     }
 
@@ -102,6 +110,45 @@ export function TaskBoard({
     function closeForm() {
         setIsCreating(false);
         setEditingTask(null);
+    }
+
+    async function handleArchive(task: Task) {
+        const confirmed = window.confirm(
+            `Удалить задачу «${task.title}»?\n\n` +
+            'Задача исчезнет из CRM, но история сохранится.',
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setDeletingId(task.id);
+        setError(null);
+
+        try {
+            await archiveTask(task.id);
+
+            setTasks((previous) =>
+                previous.filter((item) => item.id !== task.id),
+            );
+
+            if (historyTaskId === task.id) {
+                setHistoryTaskId(null);
+                setHistory([]);
+            }
+
+            if (editingTask?.id === task.id) {
+                setEditingTask(null);
+            }
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось удалить задачу',
+            );
+        } finally {
+            setDeletingId(null);
+        }
     }
 
     async function toggleHistory(taskId: string) {
@@ -119,13 +166,12 @@ export function TaskBoard({
 
         try {
             const data = await getTaskHistory(taskId);
-
             setHistory(data);
         } catch (err) {
             setHistoryError(
                 err instanceof Error
-                ? err.message
-                : 'Не удалось загрузить историю',
+                    ? err.message
+                    : 'Не удалось загрузить историю',
             );
         } finally {
             setHistoryLoading(false);
@@ -177,32 +223,43 @@ export function TaskBoard({
                     <h3>{task.title}</h3>
 
                     {task.description && (
-                        <p>{task.description}</p>
+                    <p>{task.description}</p>
                     )}
 
-                    <p>
-                        Статус: {statusLabels[task.status]}
-                    </p>
+                    <p>Статус: {statusLabels[task.status]}</p>
+
+                    <p>Исполнитель: {task.assignee_id}</p>
 
                     <p>
-                        Исполнитель: {task.assignee_id}
-                    </p>
-
-                    <p>
-                        Создана:{' '}
-                        {new Date(task.created_at).toLocaleString('ru-RU')}
+                    Создана:{' '}
+                    {new Date(task.created_at).toLocaleString('ru-RU')}
                     </p>
 
                     {isManager && (
+                    <div>
                         <button
                             type="button"
+                            disabled={deletingId !== null}
                             onClick={() => {
-                            setIsCreating(false);
-                            setEditingTask(task);
+                                setIsCreating(false);
+                                setEditingTask(task);
                             }}
                         >
                             Редактировать задачу
                         </button>
+
+                        {' '}
+
+                        <button
+                            type="button"
+                            disabled={deletingId !== null}
+                            onClick={() => void handleArchive(task)}
+                        >
+                        {deletingId === task.id
+                            ? 'Удаление...'
+                            : 'Удалить задачу'}
+                        </button>
+                    </div>
                     )}
 
                     <TaskStatusActions
@@ -216,62 +273,58 @@ export function TaskBoard({
                         type="button"
                         onClick={() => void toggleHistory(task.id)}
                     >
-                        {historyTaskId === task.id
-                            ? 'Скрыть историю'
-                            : 'Показать историю'}
+                    {historyTaskId === task.id
+                        ? 'Скрыть историю'
+                        : 'Показать историю'}
                     </button>
 
                     {historyTaskId === task.id && (
-                        <section>
-                            <h4>История изменений</h4>
+                    <section>
+                        <h4>История изменений</h4>
 
-                            {historyLoading && (
-                                <p>Загрузка истории...</p>
-                            )}
+                        {historyLoading && (
+                        <p>Загрузка истории...</p>
+                        )}
 
-                            {historyError && (
-                                <p role="alert">{historyError}</p>
-                            )}
+                        {historyError && (
+                        <p role="alert">{historyError}</p>
+                        )}
 
-                            {!historyLoading &&
-                                !historyError &&
-                                history.length === 0 && (
-                                    <p>История пока пуста.</p>
-                            )}
+                        {!historyLoading &&
+                        !historyError &&
+                        history.length === 0 && (
+                            <p>История пока пуста.</p>
+                        )}
 
-                            {!historyLoading && !historyError && (
-                                <ol>
-                                    {history.map((entry) => (
-                                    <li key={entry.id}>
-                                        <p>
-                                            {entry.from_status
-                                                ? statusLabels[entry.from_status]
-                                                : 'Создана'}
-                                            {' → '}
-                                            {statusLabels[entry.to_status]}
-                                        </p>
+                        {!historyLoading && !historyError && (
+                        <ol>
+                            {history.map((entry) => (
+                            <li key={entry.id}>
+                                <p>
+                                {entry.from_status
+                                    ? statusLabels[entry.from_status]
+                                    : 'Создана'}
+                                {' → '}
+                                {statusLabels[entry.to_status]}
+                                </p>
 
-                                        <p>
-                                            Кто: {entry.changed_by}
-                                        </p>
+                                <p>Кто: {entry.changed_by}</p>
 
-                                        <p>
-                                            Когда:{' '}
-                                            {new Date(
-                                                entry.created_at,
-                                            ).toLocaleString('ru-RU')}
-                                        </p>
+                                <p>
+                                Когда:{' '}
+                                {new Date(
+                                    entry.created_at,
+                                ).toLocaleString('ru-RU')}
+                                </p>
 
-                                        {entry.comment && (
-                                            <p>
-                                                Комментарий: {entry.comment}
-                                            </p>
-                                        )}
-                                    </li>
-                                    ))}
-                                </ol>
-                            )}
-                        </section>
+                                {entry.comment && (
+                                <p>Комментарий: {entry.comment}</p>
+                                )}
+                            </li>
+                            ))}
+                        </ol>
+                        )}
+                    </section>
                     )}
                 </article>
                 </li>

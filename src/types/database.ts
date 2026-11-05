@@ -1,3 +1,4 @@
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
@@ -11,7 +12,8 @@ export type Database = {
           }
           Functions: {
             "graphql":
-{ Args: { "extensions"?: Json,"operationName"?: string,"query"?: string,"variables"?: Json }; Returns: Json }
+{ Args: { "extensions"?: Json,"operationName"?: string,"query"?: string,"variables"?: Json }; Returns: Json
+                           }
           }
           Enums: {
             [_ in never]: never
@@ -23,14 +25,14 @@ export type Database = {
           Tables: {
             "objects": {
                   Row: {
-                    "address": string,"created_at": string,"created_by": string,"id": string,"name": string,"updated_at": string
+                    "address": string,"created_at": string,"created_by": string,"deleted_at": string | null,"id": string,"name": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "address": string,"created_at"?: string,"created_by": string,"id"?: string,"name": string,"updated_at"?: string
+                    "address": string,"created_at"?: string,"created_by": string,"deleted_at"?: string | null,"id"?: string,"name": string,"updated_at"?: string
                   }
                   Update: {
-                    "address"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"name"?: string,"updated_at"?: string
+                    "address"?: string,"created_at"?: string,"created_by"?: string,"deleted_at"?: string | null,"id"?: string,"name"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -83,14 +85,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "assignee_id": string,"author_id": string,"created_at": string,"description": string | null,"id": string,"object_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
+                    "assignee_id": string,"author_id": string,"created_at": string,"deleted_at": string | null,"description": string | null,"id": string,"object_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "assignee_id": string,"author_id": string,"created_at"?: string,"description"?: string | null,"id"?: string,"object_id": string,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string
+                    "assignee_id": string,"author_id": string,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"id"?: string,"object_id": string,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "assignee_id"?: string,"author_id"?: string,"created_at"?: string,"description"?: string | null,"id"?: string,"object_id"?: string,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string
+                    "assignee_id"?: string,"author_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"description"?: string | null,"id"?: string,"object_id"?: string,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -119,11 +121,18 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "change_task_status":
+            "archive_object":
+{ Args: { "p_object_id": string }; Returns: undefined
+                           },
+"archive_task":
+{ Args: { "p_task_id": string }; Returns: undefined
+                           },
+"change_task_status":
 { Args: { "p_comment"?: string,"p_new_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: {
               "assignee_id": string,
 "author_id": string,
 "created_at": string,
+"deleted_at": string | null,
 "description": string | null,
 "id": string,
 "object_id": string,

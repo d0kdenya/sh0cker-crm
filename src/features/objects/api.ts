@@ -1,5 +1,9 @@
 import { supabase } from '../../lib/supabase';
-import type { CreateObjectInput, UpdateObjectInput } from './types';
+
+import type {
+    CreateObjectInput,
+    UpdateObjectInput,
+} from './types';
 
 export async function getObjects() {
     const { data, error } = await supabase
@@ -12,7 +16,7 @@ export async function getObjects() {
     }
 
     return data;
-}
+    }
 
 export async function createObject(input: CreateObjectInput) {
     const { data: userData, error: userError } =
@@ -60,4 +64,14 @@ export async function updateObject(
     }
 
     return data;
+}
+
+export async function archiveObject(id: string) {
+    const { error } = await supabase.rpc('archive_object', {
+        p_object_id: id,
+    });
+
+    if (error) {
+        throw error;
+    }
 }

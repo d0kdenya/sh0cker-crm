@@ -18,6 +18,8 @@ function App() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  const [taskBoardVersion, setTaskBoardVersion] = useState(0);
+
   const userId = user?.id;
 
   // Восстановление и отслеживание сессии
@@ -207,10 +209,13 @@ function App() {
           <ObjectList
             key={`objects-${user.id}`}
             isManager={currentProfile.role === 'manager'}
+            onObjectArchived={() => {
+              setTaskBoardVersion((previous) => previous + 1);
+            }}
           />
 
           <TaskBoard
-            key={`tasks-${user.id}`}
+            key={`tasks-${user.id}-${taskBoardVersion}`}
             role={currentProfile.role}
             currentUserId={user.id}
           />

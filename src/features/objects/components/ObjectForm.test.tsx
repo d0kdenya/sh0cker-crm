@@ -18,6 +18,7 @@ const existingObject: ConstructionObject = {
     created_by: '07c0f812-375f-4d48-bdf5-ae8b03d93d20',
     created_at: '2026-11-05T12:00:00+00:00',
     updated_at: '2026-11-05T12:00:00+00:00',
+    deleted_at: null,
 };
 
 describe('ObjectForm', () => {

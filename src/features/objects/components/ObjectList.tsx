@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 
-import { getObjects } from '../api';
+import {
+    archiveObject,
+    getObjects,
+} from '../api';
+
 import type {
     ConstructionObject,
     ObjectListProps,
@@ -8,7 +12,10 @@ import type {
 
 import { ObjectForm } from './ObjectForm';
 
-export function ObjectList({ isManager }: ObjectListProps) {
+export function ObjectList({
+    isManager,
+    onObjectArchived,
+}: ObjectListProps) {
     const [objects, setObjects] = useState<ConstructionObject[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -16,6 +23,8 @@ export function ObjectList({ isManager }: ObjectListProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingObject, setEditingObject] =
         useState<ConstructionObject | null>(null);
+
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -35,9 +44,9 @@ export function ObjectList({ isManager }: ObjectListProps) {
                 }
 
                 setError(
-                err instanceof Error
-                    ? err.message
-                    : 'Не удалось загрузить объекты',
+                    err instanceof Error
+                        ? err.message
+                        : 'Не удалось загрузить объекты',
                 );
 
                 setLoading(false);
@@ -59,8 +68,8 @@ export function ObjectList({ isManager }: ObjectListProps) {
         } catch (err) {
             setError(
                 err instanceof Error
-                ? err.message
-                : 'Не удалось обновить список объектов',
+                    ? err.message
+                    : 'Не удалось обновить объекты',
             );
             throw err;
         } finally {
@@ -78,6 +87,39 @@ export function ObjectList({ isManager }: ObjectListProps) {
     function handleCancel() {
         setIsCreating(false);
         setEditingObject(null);
+    }
+
+    async function handleArchive(object: ConstructionObject) {
+        const confirmed = window.confirm(
+            `Удалить объект «${object.name}» и все его задачи?\n\n` +
+            'Записи будут скрыты, но история сохранится.',
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setDeletingId(object.id);
+        setError(null);
+
+        try {
+            await archiveObject(object.id);
+            onObjectArchived?.();
+
+            setObjects((previous) =>
+                previous.filter((item) => item.id !== object.id),
+            );
+
+            handleCancel();
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось удалить объект',
+            );
+        } finally {
+            setDeletingId(null);
+        }
     }
 
     return (
@@ -124,15 +166,30 @@ export function ObjectList({ isManager }: ObjectListProps) {
                     <p>Адрес: {object.address}</p>
 
                     {isManager && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsCreating(false);
-                            setEditingObject(object);
-                        }}
-                    >
-                        Редактировать
-                    </button>
+                    <div>
+                        <button
+                            type="button"
+                            disabled={deletingId !== null}
+                            onClick={() => {
+                                setIsCreating(false);
+                                setEditingObject(object);
+                            }}
+                        >
+                            Редактировать
+                        </button>
+
+                        {' '}
+
+                        <button
+                            type="button"
+                            disabled={deletingId !== null}
+                            onClick={() => void handleArchive(object)}
+                        >
+                        {deletingId === object.id
+                            ? 'Удаление...'
+                            : 'Удалить объект'}
+                        </button>
+                    </div>
                     )}
                 </article>
                 </li>
