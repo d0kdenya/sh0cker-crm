@@ -1,11 +1,17 @@
+
 import { useEffect, useState, type FormEvent } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { Layers3, LockKeyhole } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
 import type { Profile } from '../features/auth/types';
+import type { AppSection } from '../components/layout/types';
 
+import { AppLayout } from '../components/layout/AppLayout';
 import { ObjectList } from '../features/objects/components/ObjectList';
 import { TaskBoard } from '../features/tasks/components/TaskBoard';
+
+import './App.css';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,11 +24,13 @@ function App() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  const [activeSection, setActiveSection] =
+    useState<AppSection>('tasks');
+
   const [taskBoardVersion, setTaskBoardVersion] = useState(0);
 
   const userId = user?.id;
 
-  // Восстановление и отслеживание сессии
   useEffect(() => {
     let active = true;
 
@@ -30,8 +38,8 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) {
-      return;
-    }
+        return;
+      }
 
       setUser(session?.user ?? null);
       setAuthLoading(false);
@@ -39,8 +47,8 @@ function App() {
 
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!active) {
-      return;
-    }
+        return;
+      }
 
       if (error) {
         setError(error.message);
@@ -57,11 +65,10 @@ function App() {
     };
   }, []);
 
-  // Получение роли текущего пользователя
   useEffect(() => {
     if (!userId) {
-      return;
-    }
+        return;
+      }
 
     let active = true;
 
@@ -72,8 +79,8 @@ function App() {
       .single()
       .then(({ data, error }) => {
         if (!active) {
-      return;
-    }
+        return;
+      }
 
         if (error) {
           setError(error.message);
@@ -91,7 +98,9 @@ function App() {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (loading) return;
+    if (loading) {
+        return;
+      }
 
     setLoading(true);
     setError('');
@@ -112,7 +121,7 @@ function App() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Ошибка авторизации',
+          : 'Не удалось войти в систему',
       );
     } finally {
       setLoading(false);
@@ -132,96 +141,133 @@ function App() {
     setUser(null);
     setProfile(null);
     setPassword('');
+    setActiveSection('tasks');
+    setTaskBoardVersion(0);
   }
 
   if (authLoading) {
     return (
-      <main>
-        <p>Проверка авторизации...</p>
-      </main>
+      <div className="crm-auth-page">
+        <div className="crm-auth-loading">
+          Проверка авторизации...
+        </div>
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <main>
-        <h1>Sh0cker CRM</h1>
-        <h2>Вход в систему</h2>
+      <div className="crm-auth-page">
+        <div className="crm-auth-card">
+          <div className="crm-auth-brand">
+            <span className="crm-auth-logo">
+              <Layers3 size={29} />
+            </span>
 
-        <form onSubmit={(event) => void handleLogin(event)}>
-          <div>
-            <label htmlFor="email">Email</label>
-
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+            <h1>Sh0cker CRM</h1>
+            <p>Управление объектами и задачами</p>
           </div>
 
-          <div>
-            <label htmlFor="password">Пароль</label>
-
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+          <div className="crm-auth-heading">
+            <h2>Добро пожаловать</h2>
+            <p>Войдите в своё рабочее пространство</p>
           </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
-        </form>
+          <form onSubmit={(event) => void handleLogin(event)}>
+            <div className="crm-form-field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Введите email"
+                required
+              />
+            </div>
 
-        {error && <p role="alert">{error}</p>}
-      </main>
+            <div className="crm-form-field">
+              <label htmlFor="password">Пароль</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Введите пароль"
+                required
+              />
+            </div>
+
+            {error && <p role="alert">{error}</p>}
+
+            <button
+              className="crm-auth-submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? 'Выполняется вход...' : 'Войти в CRM'}
+            </button>
+          </form>
+
+          <div className="crm-auth-footer">
+            <LockKeyhole size={15} />
+            <span>Защищённое рабочее пространство</span>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  // Защита от отображения профиля предыдущей сессии
   const currentProfile =
     profile?.id === user.id ? profile : null;
 
+  if (!currentProfile) {
+    return (
+      <div className="crm-auth-page">
+        <div className="crm-auth-card">
+          <p>Загрузка профиля...</p>
+
+          {error && <p role="alert">{error}</p>}
+
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+          >
+            Выйти
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <main>
-      <h1>Sh0cker CRM</h1>
-
-      <p>Пользователь: {user.email}</p>
-      <p>
-        Роль: {currentProfile?.role ?? 'Загрузка...'}
-      </p>
-
-      <button type="button" onClick={() => void handleLogout()}>
-        Выйти
-      </button>
-
+    <AppLayout
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      onLogout={handleLogout}
+      role={currentProfile.role}
+      email={user.email ?? 'Пользователь'}
+    >
       {error && <p role="alert">{error}</p>}
 
-      {currentProfile && (
-        <>
-          <ObjectList
-            key={`objects-${user.id}`}
-            isManager={currentProfile.role === 'manager'}
-            onObjectArchived={() => {
-              setTaskBoardVersion((previous) => previous + 1);
-            }}
-          />
-
-          <TaskBoard
-            key={`tasks-${user.id}-${taskBoardVersion}`}
-            role={currentProfile.role}
-            currentUserId={user.id}
-          />
-        </>
+      {activeSection === 'objects' ? (
+        <ObjectList
+          key={`objects-${user.id}`}
+          isManager={currentProfile.role === 'manager'}
+          onObjectArchived={() => {
+            setTaskBoardVersion((previous) => previous + 1);
+          }}
+        />
+      ) : (
+        <TaskBoard
+          key={`tasks-${user.id}-${taskBoardVersion}`}
+          role={currentProfile.role}
+          currentUserId={user.id}
+        />
       )}
-    </main>
+    </AppLayout>
   );
 }
 
