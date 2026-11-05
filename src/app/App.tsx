@@ -1,30 +1,26 @@
-
 import { useEffect, useState, type FormEvent } from 'react';
 import type { User } from '@supabase/supabase-js';
 
 import { supabase } from '../lib/supabase';
-import type { TaskListItem } from '../features/tasks/types';
 import type { Profile } from '../features/auth/types';
 
 import { ObjectList } from '../features/objects/components/ObjectList';
-import { TaskStatusActions } from '../features/tasks/components/TaskStatusActions';
+import { TaskBoard } from '../features/tasks/components/TaskBoard';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
   const [authLoading, setAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const [tasks, setTasks] = useState<TaskListItem[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
-
-  const [loading, setLoading] = useState(false);
-  const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState('');
 
   const userId = user?.id;
 
+  // Восстановление и отслеживание сессии
   useEffect(() => {
     let active = true;
 
@@ -32,8 +28,8 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) {
-        return;
-      }
+      return;
+    }
 
       setUser(session?.user ?? null);
       setAuthLoading(false);
@@ -41,8 +37,8 @@ function App() {
 
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!active) {
-        return;
-      }
+      return;
+    }
 
       if (error) {
         setError(error.message);
@@ -59,6 +55,7 @@ function App() {
     };
   }, []);
 
+  // Получение роли текущего пользователя
   useEffect(() => {
     if (!userId) {
       return;
@@ -66,39 +63,23 @@ function App() {
 
     let active = true;
 
-    async function loadData() {
-      setDataLoading(true);
-      setError('');
-
-      const [profileResult, tasksResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, role')
-          .eq('id', userId!)
-          .single(),
-
-        supabase
-          .from('tasks')
-          .select('id, title, status, assignee_id, object_id')
-          .order('created_at'),
-      ]);
-
-      if (!active) return;
-
-      if (profileResult.error || tasksResult.error) {
-        setError(
-          profileResult.error?.message ??
-          tasksResult.error?.message ??
-          'Failed to load data',
-        );
-      }
-
-      setProfile(profileResult.data ?? null);
-      setTasks(tasksResult.data ?? []);
-      setDataLoading(false);
+    supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single()
+      .then(({ data, error }) => {
+        if (!active) {
+      return;
     }
 
-    void loadData();
+        if (error) {
+          setError(error.message);
+          return;
+        }
+
+        setProfile(data);
+      });
 
     return () => {
       active = false;
@@ -108,20 +89,32 @@ function App() {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (loading) return;
+
     setLoading(true);
     setError('');
 
-    const { error: loginError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    try {
+      const { error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-    if (loginError) {
-      setError(loginError.message);
+      if (loginError) {
+        throw loginError;
+      }
+
+      setPassword('');
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Ошибка авторизации',
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   async function handleLogout() {
@@ -136,7 +129,6 @@ function App() {
 
     setUser(null);
     setProfile(null);
-    setTasks([]);
     setPassword('');
   }
 
@@ -154,9 +146,10 @@ function App() {
         <h1>Sh0cker CRM</h1>
         <h2>Вход в систему</h2>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={(event) => void handleLogin(event)}>
           <div>
             <label htmlFor="email">Email</label>
+
             <input
               id="email"
               type="email"
@@ -169,6 +162,7 @@ function App() {
 
           <div>
             <label htmlFor="password">Пароль</label>
+
             <input
               id="password"
               type="password"
@@ -189,69 +183,39 @@ function App() {
     );
   }
 
+  // Защита от отображения профиля предыдущей сессии
+  const currentProfile =
+    profile?.id === user.id ? profile : null;
+
   return (
     <main>
       <h1>Sh0cker CRM</h1>
 
       <p>Пользователь: {user.email}</p>
-      <p>Роль: {profile?.role ?? 'Загрузка...'}</p>
+      <p>
+        Роль: {currentProfile?.role ?? 'Загрузка...'}
+      </p>
 
-      <button type="button" onClick={handleLogout}>
+      <button type="button" onClick={() => void handleLogout()}>
         Выйти
       </button>
 
-      {profile && (
-        <ObjectList
-          key={user.id}
-          isManager={profile.role === 'manager'}
-        />
-      )}
-
-      <h2>Доступные задачи</h2>
-
-      {dataLoading ? (
-        <p>Загрузка задач...</p>
-      ) : (
-        <ul>
-          {tasks.map((task) => (
-            <li key={task.id}>
-              <strong>{task.title}</strong>
-              {' - '}
-              {task.status}
-
-              <small> (ID: {task.id})</small>
-
-              {profile && userId && (
-                <TaskStatusActions
-                  task={task}
-                  role={profile.role}
-                  currentUserId={userId}
-                  onStatusChanged={async () => {
-                    const { data, error } = await supabase
-                      .from('tasks')
-                      .select(
-                        'id, title, status, assignee_id, object_id',
-                      )
-                      .order('created_at');
-
-                    if (error) {
-                      throw error;
-                    }
-
-                    setTasks(data);
-                  }}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {!dataLoading && tasks.length === 0 && !error && (
-        <p>Нет доступных задач.</p>
-      )}
-
       {error && <p role="alert">{error}</p>}
+
+      {currentProfile && (
+        <>
+          <ObjectList
+            key={`objects-${user.id}`}
+            isManager={currentProfile.role === 'manager'}
+          />
+
+          <TaskBoard
+            key={`tasks-${user.id}`}
+            role={currentProfile.role}
+            currentUserId={user.id}
+          />
+        </>
+      )}
     </main>
   );
 }

@@ -7,13 +7,13 @@ export type TaskStatus =
 export type Task =
     Database['public']['Tables']['tasks']['Row'];
 
+export type TaskHistory =
+    Database['public']['Tables']['task_status_history']['Row'];
+
 export type TaskListItem = Pick<
     Task,
     'id' | 'title' | 'status' | 'assignee_id' | 'object_id'
 >;
-
-export type TaskHistory =
-    Database['public']['Tables']['task_status_history']['Row'];
 
 export type CreateTaskInput = Pick<
     Database['public']['Tables']['tasks']['Insert'],
@@ -23,6 +23,11 @@ export type CreateTaskInput = Pick<
 export type UpdateTaskInput = Pick<
     Database['public']['Tables']['tasks']['Update'],
     'title' | 'description' | 'object_id' | 'assignee_id'
+>;
+
+export type Executor = Pick<
+    Database['public']['Tables']['profiles']['Row'],
+    'id' | 'full_name'
 >;
 
 export interface ChangeTaskStatusInput {
@@ -37,8 +42,21 @@ export interface TaskStatusActionsProps {
     currentUserId: string;
     onStatusChanged: () => void | Promise<void>;
 }
+
 export interface StatusAction {
     label: string;
     status: TaskStatus;
     requiresComment?: boolean;
+}
+
+export interface TaskFormProps {
+    task?: Task | null;
+    currentUserId: string;
+    onSuccess: () => void | Promise<void>;
+    onCancel: () => void;
+}
+
+export interface TaskBoardProps {
+    role: UserRole;
+    currentUserId: string;
 }
