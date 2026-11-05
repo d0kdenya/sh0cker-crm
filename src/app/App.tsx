@@ -3,12 +3,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { User } from '@supabase/supabase-js';
 
 import { supabase } from '../lib/supabase';
-import type { Task } from '../features/tasks/types';
+import type { TaskListItem } from '../features/tasks/types';
 import type { Profile } from '../features/auth/types';
 
-import { testObjectPermissions } from '../features/objects/testPermissions';
-
 import { ObjectList } from '../features/objects/components/ObjectList';
+import { TaskStatusActions } from '../features/tasks/components/TaskStatusActions';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,7 +16,7 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskListItem[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -208,13 +207,6 @@ function App() {
         />
       )}
 
-      <button
-        type="button"
-        onClick={() => void testObjectPermissions()}
-      >
-        Проверить права на объекты
-      </button>
-
       <h2>Доступные задачи</h2>
 
       {dataLoading ? (
@@ -226,7 +218,30 @@ function App() {
               <strong>{task.title}</strong>
               {' - '}
               {task.status}
+
               <small> (ID: {task.id})</small>
+
+              {profile && userId && (
+                <TaskStatusActions
+                  task={task}
+                  role={profile.role}
+                  currentUserId={userId}
+                  onStatusChanged={async () => {
+                    const { data, error } = await supabase
+                      .from('tasks')
+                      .select(
+                        'id, title, status, assignee_id, object_id',
+                      )
+                      .order('created_at');
+
+                    if (error) {
+                      throw error;
+                    }
+
+                    setTasks(data);
+                  }}
+                />
+              )}
             </li>
           ))}
         </ul>

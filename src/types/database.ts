@@ -121,7 +121,24 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "change_task_status":
+{ Args: { "p_comment"?: string,"p_new_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: {
+              "assignee_id": string,
+"author_id": string,
+"created_at": string,
+"description": string | null,
+"id": string,
+"object_id": string,
+"status": Database["public"]['Enums']["task_status"],
+"title": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "tasks"
+        isOneToOne: true
+        isSetofReturn: false
+      } }
           }
           Enums: {
             "task_status": "new"|"in_progress"|"on_review"|"accepted"|"needs_revision","user_role": "manager"|"executor"
