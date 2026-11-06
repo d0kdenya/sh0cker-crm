@@ -1,75 +1,37 @@
-# React + TypeScript + Vite
+# Sh0cker CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Мини-CRM для управления строительными объектами и задачами. Постановщик создаёт объекты, назначает работы и принимает результат; исполнитель видит свои задачи, меняет их статус и отправляет на проверку.
 
-Currently, two official plugins are available:
+## Быстрый старт
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Понадобятся **Node.js, npm, Docker** и доступ к Supabase CLI (`npx supabase`). Для локального Supabase Docker должен быть запущен.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm ci
+npx supabase start
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Посмотрите вывод `npx supabase status`: он содержит локальный API URL и publishable key. Создайте файл `.env.local` в корне проекта, используя имена переменных из `.env.example`:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```dotenv
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_PUBLISHABLE_KEY=
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Во вторую строку добавьте **полный publishable key**, показанный командой `npx supabase status`. Пустое значение не позволит приложению запуститься. После настройки:
 
+```bash
+npm run dev
+```
+
+Откройте URL из терминала Vite. Локальная схема создаётся миграциями Supabase. **Пользователи не создаются автоматически миграциями**: добавьте их через Supabase Studio → Authentication → Users.
+
+При создании пользователя триггер добавляет запись в `public.profiles` с ролью `executor`.;
+
+## Проверки
+
+```bash
+npm run lint
+npm run build
+npm test
 ```
